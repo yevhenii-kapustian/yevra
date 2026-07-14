@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --ink: oklch(22% 0.015 50);
+  --paper: oklch(98% 0.006 75);
+  --accent: oklch(64% 0.19 45);
+  --line: oklch(90% 0.008 60);
+  --muted: oklch(50% 0.02 50);
+  --surface: oklch(95% 0.005 60);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-accent: var(--accent);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-manrope);
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: oklch(80% 0.12 45);
+  color: #2a2118;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
