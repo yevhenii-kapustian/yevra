@@ -34,7 +34,10 @@
       "Bash(npx --yes supabase init)",
       "Bash(npx --yes supabase migration new core_schema)",
       "Bash(npx --yes supabase migration new rls)",
-      "Bash(grep -E \"^\\\\s{6}[a-z_]+: \\\\{$\" database.types.ts)"
+      "Bash(grep -E \"^\\\\s{6}[a-z_]+: \\\\{$\" database.types.ts)",
+      "Bash(openssl rand *)",
+      "Bash(tail -80 /tmp/yevra-dev.log)",
+      "Bash(git add *)"
     ]
   }
 }
