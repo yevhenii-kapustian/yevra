@@ -29,7 +29,12 @@
       "Bash(echo \"TSC:$?\")",
       "Bash(node verify-sort.mjs)",
       "Bash(node render-logo.mjs)",
-      "Bash(node verify-icons.mjs)"
+      "Bash(node verify-icons.mjs)",
+      "Bash(command -v supabase)",
+      "Bash(npx --yes supabase init)",
+      "Bash(npx --yes supabase migration new core_schema)",
+      "Bash(npx --yes supabase migration new rls)",
+      "Bash(grep -E \"^\\\\s{6}[a-z_]+: \\\\{$\" database.types.ts)"
     ]
   }
 }
