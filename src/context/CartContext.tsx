@@ -1,23 +1,40 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { getProductById, type RawProduct } from "@/lib/products";
+import {
+  formatCents,
+  FREE_SHIPPING_THRESHOLD_CENTS,
+  STANDARD_SHIPPING_COST_CENTS,
+  type EnrichedProduct,
+} from "@/lib/products";
 
-type CartLine = { productId: string; size: string; qty: number };
+export type CartLineSnapshot = {
+  productName: string;
+  productSlug: string;
+  variantLabel: string;
+  unitPriceCents: number;
+  imageUrl: string | null;
+};
+
+type CartLine = {
+  productId: string;
+  variantId: string;
+  qty: number;
+  snapshot: CartLineSnapshot;
+};
 
 export type EnrichedCartLine = CartLine & {
-  product: RawProduct;
   lineTotalLabel: string;
 };
 
 type CartContextValue = {
   cartLines: EnrichedCartLine[];
   cartCount: number;
-  subtotal: number;
-  shipping: number;
-  total: number;
-  addToCart: (productId: string, size: string, qty: number) => void;
-  quickAdd: (product: RawProduct) => void;
+  subtotalCents: number;
+  shippingCents: number;
+  totalCents: number;
+  addToCart: (productId: string, variantId: string, qty: number, snapshot: CartLineSnapshot) => void;
+  quickAdd: (product: EnrichedProduct) => void;
   incLine: (index: number) => void;
   decLine: (index: number) => void;
   removeLine: (index: number) => void;
@@ -37,22 +54,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToastMessage(""), 1800);
   }, []);
 
-  const addToCart = useCallback((productId: string, size: string, qty: number) => {
+  const addToCart = useCallback((productId: string, variantId: string, qty: number, snapshot: CartLineSnapshot) => {
     setCart((prev) => {
-      const idx = prev.findIndex((l) => l.productId === productId && l.size === size);
+      const idx = prev.findIndex((l) => l.productId === productId && l.variantId === variantId);
       if (idx >= 0) {
         const next = prev.slice();
         next[idx] = { ...next[idx], qty: next[idx].qty + qty };
         return next;
       }
-      return [...prev, { productId, size, qty }];
+      return [...prev, { productId, variantId, qty, snapshot }];
     });
   }, []);
 
   const quickAdd = useCallback(
-    (product: RawProduct) => {
-      const size = product.sizes[Math.floor(product.sizes.length / 2)];
-      addToCart(product.id, size, 1);
+    (product: EnrichedProduct) => {
+      const variant = product.variants.reduce((cheapest, v) => (v.priceCents < cheapest.priceCents ? v : cheapest));
+      addToCart(product.id, variant.id, 1, {
+        productName: product.name,
+        productSlug: product.slug,
+        variantLabel: variant.variantLabel,
+        unitPriceCents: variant.priceCents,
+        imageUrl: variant.imageUrl ?? product.primaryImage,
+      });
       showToast(`${product.name} added to cart`);
     },
     [addToCart, showToast]
@@ -81,25 +104,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setCart([]), []);
 
-  const cartLines = useMemo<EnrichedCartLine[]>(() => {
-    return cart.flatMap((line) => {
-      const product = getProductById(line.productId);
-      if (!product) return [];
-      return [{ ...line, product, lineTotalLabel: "$" + product.price * line.qty }];
-    });
-  }, [cart]);
+  const cartLines = useMemo<EnrichedCartLine[]>(
+    () => cart.map((line) => ({ ...line, lineTotalLabel: formatCents(line.snapshot.unitPriceCents * line.qty) })),
+    [cart]
+  );
 
   const cartCount = useMemo(() => cart.reduce((sum, l) => sum + l.qty, 0), [cart]);
-  const subtotal = useMemo(() => cartLines.reduce((sum, l) => sum + l.product.price * l.qty, 0), [cartLines]);
-  const shipping = subtotal > 75 || subtotal === 0 ? 0 : 8;
-  const total = subtotal + shipping;
+  const subtotalCents = useMemo(
+    () => cart.reduce((sum, l) => sum + l.snapshot.unitPriceCents * l.qty, 0),
+    [cart]
+  );
+  const shippingCents =
+    subtotalCents === 0 || subtotalCents > FREE_SHIPPING_THRESHOLD_CENTS ? 0 : STANDARD_SHIPPING_COST_CENTS;
+  const totalCents = subtotalCents + shippingCents;
 
   const value: CartContextValue = {
     cartLines,
     cartCount,
-    subtotal,
-    shipping,
-    total,
+    subtotalCents,
+    shippingCents,
+    totalCents,
     addToCart,
     quickAdd,
     incLine,

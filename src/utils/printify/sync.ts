@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/utils/supabase/admin-client";
 import type { Database, Json } from "@/utils/supabase/database.types";
-import { getShopProducts, type PrintifyImage, type PrintifyOption, type PrintifyProduct } from "./client";
+import {
+  getShopProducts,
+  markPublishingSucceeded,
+  type PrintifyImage,
+  type PrintifyOption,
+  type PrintifyProduct,
+} from "./client";
 
 type AdminClient = SupabaseClient<Database>;
 
@@ -11,6 +17,7 @@ export type SyncSummary = {
   createdVariants: number;
   updatedVariants: number;
   productIds: string[];
+  publishingErrors: string[];
 };
 
 function slugify(input: string): string {
@@ -54,10 +61,10 @@ async function upsertProduct(
   supabase: AdminClient,
   shopId: string,
   product: PrintifyProduct
-): Promise<{ id: string; created: boolean }> {
+): Promise<{ id: string; slug: string; created: boolean }> {
   const { data: existing } = await supabase
     .from("products")
-    .select("id")
+    .select("id, slug")
     .eq("printify_product_id", product.id)
     .maybeSingle();
 
@@ -74,7 +81,7 @@ async function upsertProduct(
   if (existing) {
     const { error } = await supabase.from("products").update(syncedFields).eq("id", existing.id);
     if (error) throw new Error(`Failed to update product ${product.id}: ${error.message}`);
-    return { id: existing.id, created: false };
+    return { id: existing.id, slug: existing.slug, created: false };
   }
 
   const slug = await uniqueSlug(supabase, slugify(product.title));
@@ -88,11 +95,11 @@ async function upsertProduct(
       gender: "unisex",
       status: "draft",
     })
-    .select("id")
+    .select("id, slug")
     .single();
 
   if (error || !inserted) throw new Error(`Failed to insert product ${product.id}: ${error?.message}`);
-  return { id: inserted.id, created: true };
+  return { id: inserted.id, slug: inserted.slug, created: true };
 }
 
 async function upsertVariant(
@@ -140,6 +147,7 @@ async function upsertVariant(
 export async function syncPrintifyProducts(): Promise<SyncSummary> {
   const shopId = process.env.PRINTIFY_SHOP_ID!;
   const token = process.env.PRINTIFY_API_TOKEN!;
+  const siteUrl = process.env.SITE_URL;
   const supabase = createAdminClient();
 
   const printifyProducts = await getShopProducts(shopId, token);
@@ -150,10 +158,11 @@ export async function syncPrintifyProducts(): Promise<SyncSummary> {
     createdVariants: 0,
     updatedVariants: 0,
     productIds: [],
+    publishingErrors: [],
   };
 
   for (const product of printifyProducts) {
-    const { id: productId, created } = await upsertProduct(supabase, shopId, product);
+    const { id: productId, slug, created } = await upsertProduct(supabase, shopId, product);
     summary.productIds.push(productId);
     if (created) summary.createdProducts += 1;
     else summary.updatedProducts += 1;
@@ -162,6 +171,18 @@ export async function syncPrintifyProducts(): Promise<SyncSummary> {
       const variantCreated = await upsertVariant(supabase, productId, product, variant);
       if (variantCreated) summary.createdVariants += 1;
       else summary.updatedVariants += 1;
+    }
+
+    // Releases Printify's "Publishing" lock on custom_integration shops so
+    // the product stays editable in their dashboard. Best-effort: a failure
+    // here shouldn't fail the whole sync, since the product data itself is
+    // already safely in Supabase by this point.
+    try {
+      const handle = siteUrl ? `${siteUrl}/product/${slug}` : undefined;
+      await markPublishingSucceeded(shopId, product.id, token, handle);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      summary.publishingErrors.push(message);
     }
   }
 

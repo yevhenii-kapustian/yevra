@@ -37,7 +37,12 @@
       "Bash(grep -E \"^\\\\s{6}[a-z_]+: \\\\{$\" database.types.ts)",
       "Bash(openssl rand *)",
       "Bash(tail -80 /tmp/yevra-dev.log)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(lsof -iTCP -sTCP:LISTEN -P)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(node verify-supabase.mjs)",
+      "Bash(grep -i \"^playwright$\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

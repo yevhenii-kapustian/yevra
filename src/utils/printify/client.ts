@@ -47,6 +47,36 @@ type PrintifyProductsPage = {
   last_page: number;
 };
 
+// For "custom_integration" (manual/API) shops, Printify's dashboard puts a
+// product into a locked "Publishing" state as soon as it's saved there, and
+// expects the storefront that actually displays it to call this endpoint to
+// release the lock. Without it the product stays locked (can't be edited/
+// deleted/replaced in the Printify UI) indefinitely — there's no real sales
+// channel to send an automatic confirmation back. Safe to call repeatedly;
+// Printify returns 200 even if the lock is already released.
+export async function markPublishingSucceeded(
+  shopId: string,
+  productId: string,
+  token: string,
+  externalUrl?: string
+): Promise<void> {
+  const res = await fetch(`${PRINTIFY_API_BASE}/shops/${shopId}/products/${productId}/publishing_succeeded.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      external: { id: productId, handle: externalUrl ?? "" },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Printify publishing_succeeded error ${res.status} for product ${productId}: ${body}`);
+  }
+}
+
 export async function getShopProducts(shopId: string, token: string): Promise<PrintifyProduct[]> {
   const products: PrintifyProduct[] = [];
   let page = 1;
