@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Search, ShoppingBag, User } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 const NAV_ITEMS = [
   { label: "New", href: "/catalog/new" },
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
 
 export default function Header() {
   const { cartCount } = useCart();
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-line">
@@ -36,7 +38,9 @@ export default function Header() {
 
         <div className="flex items-center gap-4.5">
           <Search size={20} strokeWidth={1.6} className="cursor-pointer opacity-75" />
-          <User size={20} strokeWidth={1.6} className="cursor-pointer opacity-75" />
+          <Link href={user ? "/account" : "/login"} className="flex items-center">
+            <User size={20} strokeWidth={1.6} className="cursor-pointer opacity-75" />
+          </Link>
           <Link href="/cart" className="relative flex items-center">
             <ShoppingBag size={21} strokeWidth={1.6} className="opacity-85" />
             {cartCount > 0 && (
