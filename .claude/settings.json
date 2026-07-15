@@ -42,7 +42,8 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(node verify-supabase.mjs)",
       "Bash(grep -i \"^playwright$\")",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "WebFetch(domain:supabase.com)"
     ]
   }
 }

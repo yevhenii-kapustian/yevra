@@ -1,9 +1,18 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "./database.types";
 
+// Singleton — calling createBrowserClient() fresh from multiple client
+// components spins up multiple GoTrueClient instances against the same
+// storage key, which Supabase's SDK warns causes duplicate
+// onAuthStateChange firings and session-write races.
+let client: ReturnType<typeof createBrowserClient<Database>> | undefined;
+
 export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  if (!client) {
+    client = createBrowserClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
+  return client;
 }
