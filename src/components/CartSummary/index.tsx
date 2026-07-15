@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { formatCents } from "@/lib/products";
 
 export default function CartSummary() {
-  const { cartLines, subtotal, shipping, total } = useCart();
+  const { cartLines, subtotalCents, shippingCents, totalCents } = useCart();
 
   if (cartLines.length === 0) return null;
 
@@ -13,11 +14,11 @@ export default function CartSummary() {
       <div className="text-[15px] font-extrabold mb-4.5">Order Summary</div>
       <div className="flex justify-between text-[13.5px] mb-2.5 text-[oklch(40%_0.02_50)]">
         <span>Subtotal</span>
-        <span>${subtotal}</span>
+        <span>{formatCents(subtotalCents)}</span>
       </div>
       <div className="flex justify-between text-[13.5px] mb-3.5 text-[oklch(40%_0.02_50)]">
         <span>Shipping</span>
-        <span>{shipping === 0 ? "Free" : `$${shipping}`}</span>
+        <span>{shippingCents === 0 ? "Free" : formatCents(shippingCents)}</span>
       </div>
       <div className="flex gap-2 mb-4">
         <input
@@ -30,7 +31,7 @@ export default function CartSummary() {
       </div>
       <div className="flex justify-between text-base font-extrabold pt-3.5 border-t border-line mb-5">
         <span>Total</span>
-        <span>${total}</span>
+        <span>{formatCents(totalCents)}</span>
       </div>
       <Link
         href="/checkout"

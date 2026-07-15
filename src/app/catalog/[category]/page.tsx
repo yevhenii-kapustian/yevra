@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import CatalogView from "./CatalogView";
 import { GENDER_LABELS, isValidCategory } from "@/lib/products";
+import { getProductsByCategory } from "@/lib/products-data";
+
+export const dynamic = "force-dynamic";
 
 type CatalogPageProps = {
   params: Promise<{ category: string }>;
@@ -12,6 +15,7 @@ export default async function CatalogPage({ params }: CatalogPageProps) {
   if (!isValidCategory(categoryParam)) notFound();
 
   const categoryLabel = GENDER_LABELS[categoryParam];
+  const products = await getProductsByCategory(categoryParam);
 
   return (
     <div className="px-4 pt-7 pb-16 sm:px-8 lg:px-12">
@@ -19,7 +23,7 @@ export default async function CatalogPage({ params }: CatalogPageProps) {
         <Link href="/">Home</Link> / {categoryLabel}
       </div>
       <h1 className="text-[28px] font-extrabold mb-5">{categoryLabel}</h1>
-      <CatalogView category={categoryParam} />
+      <CatalogView products={products} />
     </div>
   );
 }

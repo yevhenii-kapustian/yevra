@@ -5,18 +5,19 @@ import CheckoutForm from "@/components/CheckoutForm";
 import CheckoutSummary from "@/components/CheckoutSummary";
 import OrderConfirmation from "@/components/OrderConfirmation";
 import { useCart } from "@/context/CartContext";
+import { EXPRESS_SHIPPING_COST_CENTS } from "@/lib/products";
 
 type DeliveryMethod = "standard" | "express";
 type PaymentMethod = "card" | "cod";
 
 export default function CheckoutView() {
-  const { shipping, clearCart } = useCart();
+  const { shippingCents, clearCart } = useCart();
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("standard");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
 
-  const shippingCost = deliveryMethod === "express" ? 12 : shipping;
+  const shippingCostCents = deliveryMethod === "express" ? EXPRESS_SHIPPING_COST_CENTS : shippingCents;
 
   const placeOrder = () => {
     setOrderNumber(String(Math.floor(10000 + Math.random() * 90000)));
@@ -35,10 +36,12 @@ export default function CheckoutView() {
         <CheckoutForm
           deliveryMethod={deliveryMethod}
           onSelectDelivery={setDeliveryMethod}
+          standardShippingCents={shippingCents}
+          expressShippingCents={EXPRESS_SHIPPING_COST_CENTS}
           paymentMethod={paymentMethod}
           onSelectPayment={setPaymentMethod}
         />
-        <CheckoutSummary shippingCost={shippingCost} onPlaceOrder={placeOrder} />
+        <CheckoutSummary shippingCostCents={shippingCostCents} onPlaceOrder={placeOrder} />
       </div>
     </div>
   );

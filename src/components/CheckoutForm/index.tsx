@@ -1,19 +1,18 @@
 "use client";
 
+import { formatCents } from "@/lib/products";
+
 type DeliveryMethod = "standard" | "express";
 type PaymentMethod = "card" | "cod";
 
 type CheckoutFormProps = {
   deliveryMethod: DeliveryMethod;
   onSelectDelivery: (method: DeliveryMethod) => void;
+  standardShippingCents: number;
+  expressShippingCents: number;
   paymentMethod: PaymentMethod;
   onSelectPayment: (method: PaymentMethod) => void;
 };
-
-const DELIVERY_OPTIONS: { key: DeliveryMethod; label: string; priceLabel: string }[] = [
-  { key: "standard", label: "Standard Delivery (3–5 days)", priceLabel: "Free" },
-  { key: "express", label: "Express Delivery (1–2 days)", priceLabel: "$12" },
-];
 
 const PAYMENT_OPTIONS: { key: PaymentMethod; label: string }[] = [
   { key: "card", label: "Credit / Debit Card" },
@@ -25,9 +24,20 @@ const inputClass = "border border-line px-3.5 py-3 text-[13.5px] rounded-sm";
 export default function CheckoutForm({
   deliveryMethod,
   onSelectDelivery,
+  standardShippingCents,
+  expressShippingCents,
   paymentMethod,
   onSelectPayment,
 }: CheckoutFormProps) {
+  const deliveryOptions: { key: DeliveryMethod; label: string; priceLabel: string }[] = [
+    {
+      key: "standard",
+      label: "Standard Delivery (3–5 days)",
+      priceLabel: standardShippingCents === 0 ? "Free" : formatCents(standardShippingCents),
+    },
+    { key: "express", label: "Express Delivery (1–2 days)", priceLabel: formatCents(expressShippingCents) },
+  ];
+
   return (
     <div className="flex-1 min-w-70 flex flex-col gap-7" style={{ flexBasis: "480px" }}>
       <div>
@@ -56,7 +66,7 @@ export default function CheckoutForm({
       <div>
         <div className="text-sm font-extrabold mb-3.5">Delivery Method</div>
         <div className="flex flex-col gap-2.5">
-          {DELIVERY_OPTIONS.map((option) => {
+          {deliveryOptions.map((option) => {
             const selected = deliveryMethod === option.key;
             return (
               <button
