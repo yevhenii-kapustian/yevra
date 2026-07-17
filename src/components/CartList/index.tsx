@@ -21,8 +21,8 @@ export default function CartList() {
 
   return (
     <div className="flex-1 min-w-70 flex flex-col gap-5" style={{ flexBasis: "480px" }}>
-      {cartLines.map((line, idx) => (
-        <div key={`${line.productId}-${line.variantId}`} className="flex gap-4 pb-5 border-b border-line">
+      {cartLines.map((line) => (
+        <div key={line.variantId} className="flex gap-4 pb-5 border-b border-line">
           <div className="relative w-22 h-27.5 flex-none rounded-[3px] overflow-hidden" style={{ background: FALLBACK_IMAGE_BG }}>
             {line.snapshot.imageUrl && (
               <Image src={line.snapshot.imageUrl} alt="" fill className="object-cover" sizes="88px" quality={95} />
@@ -35,7 +35,7 @@ export default function CartList() {
               <div className="flex items-center border-[1.5px] border-line rounded-sm">
                 <button
                   type="button"
-                  onClick={() => decLine(idx)}
+                  onClick={() => decLine(line.variantId)}
                   className="w-7.5 h-7.5 flex items-center justify-center"
                 >
                   −
@@ -43,7 +43,7 @@ export default function CartList() {
                 <div className="w-8 text-center text-[13px] font-semibold">{line.qty}</div>
                 <button
                   type="button"
-                  onClick={() => incLine(idx)}
+                  onClick={() => incLine(line.variantId)}
                   className="w-7.5 h-7.5 flex items-center justify-center"
                 >
                   +
@@ -52,7 +52,7 @@ export default function CartList() {
               <span className="text-[14.5px] font-bold">{line.lineTotalLabel}</span>
               <button
                 type="button"
-                onClick={() => removeLine(idx)}
+                onClick={() => removeLine(line.variantId)}
                 className="text-[12.5px] text-muted underline"
               >
                 Remove
