@@ -43,7 +43,19 @@
       "Bash(node verify-supabase.mjs)",
       "Bash(grep -i \"^playwright$\")",
       "Bash(echo \"exit: $?\")",
-      "WebFetch(domain:supabase.com)"
+      "WebFetch(domain:supabase.com)",
+      "Bash(awk '/Tables: {/,0' src/utils/supabase/database.types.ts)",
+      "Bash(npm install *)",
+      "Read(//tmp/**)",
+      "Bash(node verify-checkout.mjs)",
+      "Bash(cp /tmp/debug-page.mjs ./debug-page.mjs)",
+      "Bash(node debug-page.mjs)",
+      "Bash(node /Users/evgeniikapustian/yevra/verify-checkout.mjs)",
+      "Bash(tail -60 /tmp/yevra-dev.log)",
+      "Bash(node verify-stale-item.mjs)",
+      "Bash(brew install *)",
+      "Bash(node verify-full-purchase.mjs)",
+      "Bash(python3 -c \"import json,sys; print\\(json.dumps\\(json.load\\(sys.stdin\\).get\\('scripts',{}\\), indent=2\\)\\)\")"
     ]
   }
 }

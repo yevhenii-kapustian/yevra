@@ -6,10 +6,11 @@ import { FALLBACK_IMAGE_BG, formatCents } from "@/lib/products";
 
 type CheckoutSummaryProps = {
   shippingCostCents: number;
-  onPlaceOrder: () => void;
+  pending: boolean;
+  error?: string;
 };
 
-export default function CheckoutSummary({ shippingCostCents, onPlaceOrder }: CheckoutSummaryProps) {
+export default function CheckoutSummary({ shippingCostCents, pending, error }: CheckoutSummaryProps) {
   const { cartLines, subtotalCents } = useCart();
   const totalCents = subtotalCents + shippingCostCents;
 
@@ -46,12 +47,13 @@ export default function CheckoutSummary({ shippingCostCents, onPlaceOrder }: Che
         <span>Total</span>
         <span>{formatCents(totalCents)}</span>
       </div>
+      {error && <p className="text-xs text-accent mb-3">{error}</p>}
       <button
-        type="button"
-        onClick={onPlaceOrder}
-        className="w-full bg-ink text-white py-3.75 text-sm font-bold rounded-sm hover:bg-accent"
+        type="submit"
+        disabled={pending}
+        className="w-full bg-ink text-white py-3.75 text-sm font-bold rounded-sm hover:bg-accent disabled:opacity-50"
       >
-        Place Order
+        {pending ? "Placing order…" : "Place Order"}
       </button>
     </div>
   );

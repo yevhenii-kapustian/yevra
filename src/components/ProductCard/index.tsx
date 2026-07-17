@@ -18,7 +18,7 @@ export default function ProductCard({ product, showDiscountBadge = true, showQui
     <div>
       <Link
         href={`/product/${product.slug}`}
-        className="group block relative aspect-3/4 rounded-[3px] overflow-hidden mb-2.5"
+        className="group block relative aspect-square rounded-[3px] overflow-hidden mb-2.5"
         style={{ background: FALLBACK_IMAGE_BG }}
       >
         {product.primaryImage && (

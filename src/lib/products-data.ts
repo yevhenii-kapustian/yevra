@@ -2,6 +2,7 @@
 // next/headers). Never import this from a client component — import types
 // and pure helpers from ./products instead.
 import { getActiveProductRows, getProductRowBySlug, type ProductRow } from "@/utils/supabase/queries";
+import { createClient } from "@/utils/supabase/server-client";
 import {
   formatCents,
   isSizeOptionName,
@@ -140,4 +141,47 @@ export async function getRelatedProducts(product: EnrichedProduct, count = 4): P
   return enrichRows(rows)
     .filter((p) => p.gender === product.gender && p.id !== product.id)
     .slice(0, count);
+}
+
+export type CheckoutVariant = {
+  variantId: string;
+  productId: string;
+  printifyVariantId: number;
+  productTitle: string;
+  variantLabel: string;
+  priceCents: number;
+  imageUrl: string | null;
+};
+
+// Authoritative pricing lookup for checkout — never trust CartContext's
+// snapshot unitPriceCents for an actual charge. Filters exactly like
+// toProduct() (enabled + available + parent product active) so a variant
+// that's since been disabled/hidden can't be checked out. Missing ids in the
+// returned map mean the caller must fail the whole checkout, not proceed
+// with a partial cart.
+export async function getVariantsForCheckout(variantIds: string[]): Promise<Map<string, CheckoutVariant>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("product_variants")
+    .select("*, products!inner(id, title, status)")
+    .in("id", variantIds)
+    .eq("is_enabled", true)
+    .eq("is_available", true)
+    .eq("products.status", "active");
+
+  if (error) throw error;
+
+  const map = new Map<string, CheckoutVariant>();
+  for (const row of data) {
+    map.set(row.id, {
+      variantId: row.id,
+      productId: row.products.id,
+      printifyVariantId: row.printify_variant_id,
+      productTitle: row.products.title,
+      variantLabel: row.title ?? "",
+      priceCents: row.price_cents,
+      imageUrl: row.image_url,
+    });
+  }
+  return map;
 }

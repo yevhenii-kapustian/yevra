@@ -15,10 +15,14 @@ export default async function AccountPage() {
 
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
   // RLS ("Users can view own orders") already scopes this to the current
-  // user — no explicit .eq('user_id', ...) filter needed.
+  // user — no explicit .eq('user_id', ...) filter needed. payment_status
+  // filter excludes abandoned/pending checkouts (order rows exist before
+  // payment completes — see src/app/actions/checkout.ts) so the customer
+  // never sees a "zombie" order they never actually paid for.
   const { data: orders } = await supabase
     .from("orders")
     .select("order_number, total_cents, fulfillment_status, created_at")
+    .eq("payment_status", "paid")
     .order("created_at", { ascending: false });
 
   return (
