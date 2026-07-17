@@ -48,7 +48,7 @@ export default function CatalogView({ products }: CatalogViewProps) {
         </div>
 
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-5.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5.5">
             {filtered.map((product) => (
               <ProductCard key={product.id} product={product} showQuickAdd />
             ))}
