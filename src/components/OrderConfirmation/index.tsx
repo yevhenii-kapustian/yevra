@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { formatCents } from "@/lib/products";
 import type { ShippingAddress } from "@/lib/checkout-types";
+import { useCart } from "@/context/CartContext";
 
 type ConfirmationOrder = {
   order_number: string;
@@ -21,11 +24,31 @@ type ConfirmationOrder = {
 
 type OrderConfirmationProps = {
   order: ConfirmationOrder;
+  purchasedVariantIds: string[];
   accountPrompt?: ReactNode;
 };
 
-export default function OrderConfirmation({ order, accountPrompt }: OrderConfirmationProps) {
+export default function OrderConfirmation({ order, purchasedVariantIds, accountPrompt }: OrderConfirmationProps) {
   const address = order.shipping_address;
+  const { isHydrated, cartLines, removeLine } = useCart();
+  const clearedPurchase = useRef(false);
+
+  // Removes exactly the just-purchased lines from the cart, not a blanket
+  // clearCart() — so anything added elsewhere (another tab/device) in the
+  // meantime survives. Waits for isHydrated before touching anything: firing
+  // immediately on mount would race CartContext's own async hydration
+  // effect, which loads the pre-purchase cart from localStorage/Supabase and
+  // would silently overwrite an early removal with stale data once it
+  // resolves. (Logged-in users' DB cart is also cleared server-side, from
+  // the Stripe webhook — this client-side pass is what covers guests, whose
+  // cart lives in localStorage a webhook can't reach.)
+  useEffect(() => {
+    if (!isHydrated || clearedPurchase.current || purchasedVariantIds.length === 0) return;
+    clearedPurchase.current = true;
+    for (const variantId of purchasedVariantIds) {
+      if (cartLines.some((l) => l.variantId === variantId)) removeLine(variantId);
+    }
+  }, [isHydrated, cartLines, purchasedVariantIds, removeLine]);
 
   return (
     <div className="text-center py-20 max-w-105 mx-auto">

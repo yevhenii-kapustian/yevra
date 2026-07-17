@@ -42,7 +42,7 @@ export default async function CheckoutConfirmationPage({ searchParams }: PagePro
   const { data: order } = await admin
     .from("orders")
     .select(
-      "id, order_number, email, subtotal_cents, shipping_cents, total_cents, shipping_address, user_id, order_items(id, title, variant_title, quantity, line_total_cents)"
+      "id, order_number, email, subtotal_cents, shipping_cents, total_cents, shipping_address, user_id, order_items(id, title, variant_title, quantity, line_total_cents, variant_id)"
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -55,10 +55,12 @@ export default async function CheckoutConfirmationPage({ searchParams }: PagePro
   } = await supabase.auth.getUser();
 
   const showAccountPrompt = !order.user_id && !user;
+  const purchasedVariantIds = order.order_items.map((i) => i.variant_id).filter((v): v is string => v !== null);
 
   return (
     <OrderConfirmation
       order={{ ...order, shipping_address: order.shipping_address as unknown as ShippingAddress }}
+      purchasedVariantIds={purchasedVariantIds}
       accountPrompt={showAccountPrompt ? <CreateAccountPrompt orderId={order.id} email={order.email} /> : null}
     />
   );

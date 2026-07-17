@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       // a redelivered webhook for an already-paid order just updates 0 rows.
       // "unpaid"/"paid" are the only pre-refund values the orders_payment_status_check
       // constraint allows — there's no "pending" state in this schema.
-      await admin
+      const { data: paidOrder } = await admin
         .from("orders")
         .update({
           payment_status: "paid",
@@ -33,7 +33,21 @@ export async function POST(request: NextRequest) {
           payment_provider: "stripe",
         })
         .eq("id", orderId)
-        .eq("payment_status", "unpaid");
+        .eq("payment_status", "unpaid")
+        .select("user_id, order_items(variant_id)")
+        .maybeSingle();
+
+      // Server-side half of "purchased items leave the cart" — this covers
+      // logged-in users' DB-backed cart immediately and reliably (no client
+      // ever has to run for it to take effect). Guest/localStorage carts are
+      // handled client-side instead, on the confirmation page, since a
+      // webhook has no way to reach into a browser's storage.
+      if (paidOrder?.user_id) {
+        const variantIds = paidOrder.order_items.map((i) => i.variant_id).filter((v): v is string => v !== null);
+        if (variantIds.length > 0) {
+          await admin.from("cart_items").delete().eq("user_id", paidOrder.user_id).in("variant_id", variantIds);
+        }
+      }
     }
   } else if (event.type === "checkout.session.expired") {
     const session = event.data.object as Stripe.Checkout.Session;
