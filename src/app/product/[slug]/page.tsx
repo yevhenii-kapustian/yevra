@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import ProductGallery from "@/components/ProductGallery";
 import ProductInfo from "@/components/ProductInfo";
 import RelatedProducts from "@/components/RelatedProducts";
-import { GENDER_LABELS, breadcrumbCategoryFor } from "@/lib/products";
+import { CATEGORY_LABELS, breadcrumbCategoryFor } from "@/lib/products";
 import { getProductBySlug, getRelatedProducts } from "@/lib/products-data";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +30,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const breadcrumbCategory = breadcrumbCategoryFor(product.gender);
-  const categoryLabel = GENDER_LABELS[breadcrumbCategory];
+  const breadcrumbCategory = breadcrumbCategoryFor(product.productType);
+  const categoryLabel = CATEGORY_LABELS[breadcrumbCategory];
   const relatedProducts = await getRelatedProducts(product, 4);
 
   return (

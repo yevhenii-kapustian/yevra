@@ -14,6 +14,7 @@ export type ProductVariant = {
 };
 
 export type Gender = "men" | "women" | "kids" | "unisex";
+export type ProductType = "apparel" | "accessories";
 
 export type Product = {
   id: string;
@@ -21,6 +22,7 @@ export type Product = {
   name: string;
   description: string | null;
   gender: Gender;
+  productType: ProductType;
   images: { src: string; isDefault: boolean }[];
   options: ProductOption[];
   variants: ProductVariant[]; // pre-filtered to enabled + available — never empty
@@ -36,18 +38,20 @@ export type EnrichedProduct = Product & {
   primaryImage: string | null;
 };
 
-export type CategoryKey = "men" | "women" | "kids" | "sale" | "new";
+// "shop"/"accessories" drive the nav (see src/components/Header) — "kids"
+// and "sale" stay valid, reachable categories (SaleBanner links to
+// /catalog/sale and self-hides until real discounted items exist) without
+// being advertised in the nav bar until there's real inventory behind them.
+export type CategoryKey = "shop" | "accessories" | "kids" | "sale" | "new";
 export type SortKey = "popular" | "price-asc" | "price-desc" | "newest";
 
-export const GENDER_LABELS: Record<CategoryKey, string> = {
-  men: "Men",
-  women: "Women",
+export const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  shop: "Shop",
+  accessories: "Accessories",
   kids: "Kids",
   sale: "Sale",
   new: "New Arrivals",
 };
-
-const SIZE_OPTION_NAMES = ["Sizes", "Size"];
 
 const LETTER_SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "2XL", "XXXL", "3XL", "4XL", "5XL", "6XL"];
 
@@ -71,8 +75,14 @@ export function sortSizeValues(values: string[]): string[] {
   });
 }
 
+// Printify names the "size" option differently per blueprint — plain
+// "Size"/"Sizes" for apparel and most accessories, but "Bag Size", "Hat
+// sizes", etc. for others. Match by substring instead of an exact list so
+// none of these fall through. "Phone Models" (the phone case's device
+// picker) correctly does NOT match — it's not a size in any customer-facing
+// sense, just happens to share Printify's internal "size" option type.
 export function isSizeOptionName(name: string): boolean {
-  return SIZE_OPTION_NAMES.includes(name);
+  return /size/i.test(name);
 }
 
 // Used whenever a product has zero images — deliberately neutral (no color
@@ -81,14 +91,11 @@ export const FALLBACK_IMAGE_BG =
   "repeating-linear-gradient(135deg, oklch(95% 0.005 60) 0 16px, oklch(91% 0.005 60) 16px 32px)";
 
 export function isValidCategory(value: string): value is CategoryKey {
-  return value in GENDER_LABELS;
+  return value in CATEGORY_LABELS;
 }
 
-// Unisex products don't have their own catalog route — they show up under
-// both /catalog/men and /catalog/women (see matchesCategory in
-// products-data.ts), but a single breadcrumb link has to pick one.
-export function breadcrumbCategoryFor(gender: Gender): CategoryKey {
-  return gender === "unisex" ? "men" : gender;
+export function breadcrumbCategoryFor(productType: ProductType): CategoryKey {
+  return productType === "accessories" ? "accessories" : "shop";
 }
 
 export function formatCents(cents: number): string {
@@ -110,8 +117,9 @@ export function getCategoryFacets(products: EnrichedProduct[]) {
   const sizes = new Set<string>();
   for (const product of products) {
     for (const variant of product.variants) {
-      const sizeValue = SIZE_OPTION_NAMES.map((name) => variant.optionValues[name]).find(Boolean);
-      if (sizeValue) sizes.add(sizeValue);
+      for (const [name, value] of Object.entries(variant.optionValues)) {
+        if (isSizeOptionName(name) && value) sizes.add(value);
+      }
     }
   }
   return { sizes: sortSizeValues(Array.from(sizes)) };
@@ -126,7 +134,9 @@ export function filterAndSortProducts(
   let filtered = products;
   if (sizes.length) {
     filtered = filtered.filter((p) =>
-      p.variants.some((v) => SIZE_OPTION_NAMES.some((name) => sizes.includes(v.optionValues[name])))
+      p.variants.some((v) =>
+        Object.entries(v.optionValues).some(([name, value]) => isSizeOptionName(name) && sizes.includes(value))
+      )
     );
   }
 

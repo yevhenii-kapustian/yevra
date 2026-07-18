@@ -12,7 +12,7 @@ export default function CartList() {
     return (
       <div className="w-full text-center py-20">
         <div className="text-[15px] text-muted mb-5">Your cart is empty.</div>
-        <Link href="/catalog/men" className="inline-block bg-ink text-white px-6.5 py-3.25 text-sm font-bold rounded-sm">
+        <Link href="/catalog/shop" className="inline-block bg-ink text-white px-6.5 py-3.25 text-sm font-bold rounded-sm">
           Continue Shopping
         </Link>
       </div>

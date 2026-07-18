@@ -13,9 +13,15 @@ export default async function TrendingProducts() {
           View all
         </Link>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-5.5">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+      {/* Explicit fr-sized columns (not auto-fill) so the row always fills
+          the full width regardless of item count — auto-fill reserves empty
+          phantom tracks instead of letting real items stretch into the gap.
+          The uneven 3fr/2fr widths give the first card a featured feel. */}
+      <div className="grid grid-cols-2 auto-rows-60 sm:auto-rows-75 lg:grid-cols-[3fr_2fr_2fr_2fr] lg:auto-rows-105 gap-5.5">
+        {products.map((product, i) => (
+          <div key={product.id} className={i === 0 ? "col-span-2 sm:col-span-1" : undefined}>
+            <ProductCard product={product} imageClassName="flex-1" />
+          </div>
         ))}
       </div>
     </section>

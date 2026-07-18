@@ -1,21 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Search, ShoppingBag, User } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 
 const NAV_ITEMS = [
   { label: "New", href: "/catalog/new" },
-  { label: "Men", href: "/catalog/men" },
-  { label: "Women", href: "/catalog/women" },
-  { label: "Kids", href: "/catalog/kids" },
-  { label: "Sale", href: "/catalog/sale" },
+  { label: "Shop", href: "/catalog/shop" },
+  { label: "Accessories", href: "/catalog/accessories" },
 ];
 
 export default function Header() {
   const { cartCount } = useCart();
   const { user } = useAuth();
+  const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-line">
@@ -25,15 +25,20 @@ export default function Header() {
         </Link>
 
         <nav className="flex gap-4 sm:gap-6 lg:gap-7 flex-wrap">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="text-sm font-semibold tracking-wide text-ink py-1 border-b-2 border-transparent hover:text-accent"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`text-sm font-semibold tracking-wide py-1 border-b-2 hover:text-accent ${
+                  active ? "text-accent border-accent" : "text-ink border-transparent"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-4.5">
