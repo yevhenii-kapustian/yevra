@@ -9,16 +9,26 @@ type ProductCardProps = {
   product: EnrichedProduct;
   showDiscountBadge?: boolean;
   showQuickAdd?: boolean;
+  // Defaults to a square crop (catalog/related grids, where every card is
+  // the same size). Trending Now instead sizes cards by an explicit grid
+  // row height, so it passes "flex-1" to fill whatever's left after the
+  // title/price text below it.
+  imageClassName?: string;
 };
 
-export default function ProductCard({ product, showDiscountBadge = true, showQuickAdd = false }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  showDiscountBadge = true,
+  showQuickAdd = false,
+  imageClassName = "aspect-square",
+}: ProductCardProps) {
   const { quickAdd } = useCart();
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <Link
         href={`/product/${product.slug}`}
-        className="group block relative aspect-square rounded-[3px] overflow-hidden mb-2.5"
+        className={`group block relative ${imageClassName} rounded-[3px] overflow-hidden mb-2.5`}
         style={{ background: FALLBACK_IMAGE_BG }}
       >
         {product.primaryImage && (

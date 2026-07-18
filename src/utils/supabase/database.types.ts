@@ -327,6 +327,7 @@ export type Database = {
           printify_raw: Json | null
           printify_shop_id: string
           printify_synced_at: string | null
+          product_type: string
           slug: string
           status: string
           title: string
@@ -344,6 +345,7 @@ export type Database = {
           printify_raw?: Json | null
           printify_shop_id: string
           printify_synced_at?: string | null
+          product_type?: string
           slug: string
           status?: string
           title: string
@@ -361,6 +363,7 @@ export type Database = {
           printify_raw?: Json | null
           printify_shop_id?: string
           printify_synced_at?: string | null
+          product_type?: string
           slug?: string
           status?: string
           title?: string

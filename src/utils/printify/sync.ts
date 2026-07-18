@@ -17,6 +17,7 @@ export type SyncSummary = {
   createdVariants: number;
   updatedVariants: number;
   productIds: string[];
+  archivedProducts: string[];
   publishingErrors: string[];
 };
 
@@ -55,6 +56,40 @@ function pickVariantImage(images: PrintifyImage[], variantId: number): string | 
   if (variantImage) return variantImage.src;
   const defaultImage = images.find((img) => img.is_default);
   return defaultImage?.src ?? images[0]?.src ?? null;
+}
+
+// Products deleted directly on Printify never show up in getShopProducts()
+// again — without this, their Supabase row (and, worse, their live
+// storefront listing) would just sit there forever, purchasable but
+// unfulfillable. "archived" (not a hard delete) keeps order history intact:
+// order_items.product_id is ON DELETE SET NULL, but archiving needs no
+// cascade at all since the row never goes away.
+async function archiveMissingProducts(
+  supabase: AdminClient,
+  shopId: string,
+  seenPrintifyIds: string[]
+): Promise<string[]> {
+  const { data: existing, error } = await supabase
+    .from("products")
+    .select("id, title, printify_product_id")
+    .eq("printify_shop_id", shopId)
+    .neq("status", "archived");
+  if (error) throw new Error(`Failed to list existing products for archiving check: ${error.message}`);
+
+  const seen = new Set(seenPrintifyIds);
+  const toArchive = (existing ?? []).filter((p) => !seen.has(p.printify_product_id));
+  if (toArchive.length === 0) return [];
+
+  const { error: updateError } = await supabase
+    .from("products")
+    .update({ status: "archived" })
+    .in(
+      "id",
+      toArchive.map((p) => p.id)
+    );
+  if (updateError) throw new Error(`Failed to archive removed products: ${updateError.message}`);
+
+  return toArchive.map((p) => p.title);
 }
 
 async function upsertProduct(
@@ -158,6 +193,7 @@ export async function syncPrintifyProducts(): Promise<SyncSummary> {
     createdVariants: 0,
     updatedVariants: 0,
     productIds: [],
+    archivedProducts: [],
     publishingErrors: [],
   };
 
@@ -185,6 +221,12 @@ export async function syncPrintifyProducts(): Promise<SyncSummary> {
       summary.publishingErrors.push(message);
     }
   }
+
+  summary.archivedProducts = await archiveMissingProducts(
+    supabase,
+    shopId,
+    printifyProducts.map((p) => p.id)
+  );
 
   return summary;
 }

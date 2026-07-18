@@ -13,7 +13,7 @@ type CatalogViewProps = {
 export default function CatalogView({ products }: CatalogViewProps) {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortKey>("popular");
-  const [sizeFilterOpen, setSizeFilterOpen] = useState(true);
+  const [sizeFilterOpen, setSizeFilterOpen] = useState(false);
 
   const facets = useMemo(() => getCategoryFacets(products), [products]);
   const filtered = useMemo(
@@ -25,12 +25,13 @@ export default function CatalogView({ products }: CatalogViewProps) {
     setSelectedSizes((prev) => (prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]));
   };
 
-  return (
-    <div className="flex gap-8 flex-wrap items-start">
-      <CatalogFilters
-        sections={[
+  // Accessories mostly have no Size option at all — an empty filter section
+  // would just be dead space, so only show it when there's something to filter.
+  const filterSections =
+    facets.sizes.length > 0
+      ? [
           {
-            key: "size",
+            key: "size" as const,
             label: "Size",
             options: facets.sizes,
             selected: selectedSizes,
@@ -38,8 +39,12 @@ export default function CatalogView({ products }: CatalogViewProps) {
             onToggleOpen: () => setSizeFilterOpen((o) => !o),
             onToggleOption: toggleSize,
           },
-        ]}
-      />
+        ]
+      : [];
+
+  return (
+    <div className="flex gap-8 flex-wrap items-start">
+      {filterSections.length > 0 && <CatalogFilters sections={filterSections} />}
 
       <div className="flex-1 min-w-0" style={{ flexBasis: "480px" }}>
         <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">

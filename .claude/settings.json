@@ -55,7 +55,13 @@
       "Bash(node verify-stale-item.mjs)",
       "Bash(brew install *)",
       "Bash(node verify-full-purchase.mjs)",
-      "Bash(python3 -c \"import json,sys; print\\(json.dumps\\(json.load\\(sys.stdin\\).get\\('scripts',{}\\), indent=2\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; print\\(json.dumps\\(json.load\\(sys.stdin\\).get\\('scripts',{}\\), indent=2\\)\\)\")",
+      "Bash(node debug-img.mjs)",
+      "Bash(node screenshot-honest.mjs)",
+      "Bash(ffmpeg -y -i public/landing/men-gif-cap.mp4 -vf crop=720:720:280:0 -an -c:v libx264 -preset slow -crf 20 -pix_fmt yuv420p -movflags +faststart public/landing/hero-loop-2.mp4)",
+      "Bash(ffprobe -v error -select_streams v:0 -show_entries stream=width,height,duration -of default=noprint_wrappers=1 \"public/landing/hero-loop-2.mp4\")",
+      "Bash(ffmpeg -y -i \"public/landing/hero-loop-2.mp4\" -update 1 -vf \"select=eq\\(n\\\\,60\\)\" -vframes 1 /tmp/hero-loop-2-frame.png)",
+      "Bash(node debug-visibility.mjs)"
     ]
   }
 }

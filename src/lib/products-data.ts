@@ -61,12 +61,18 @@ function toProduct(row: ProductRow): Product | null {
 
   // Only offer values that at least one sellable variant actually has —
   // never the full blueprint catalog (see normalizeOptionNames above).
+  // Printify blueprints declare option order inconsistently — some list
+  // Color before Size, others the reverse. Force Size/Sizes first
+  // regardless of source order, rather than showing whatever a given
+  // blueprint happens to declare (Array.sort is stable, so anything else
+  // keeps its original relative order).
   const options: ProductOption[] = optionOrder
     .map((name) => {
       const values = Array.from(new Set(variants.map((v) => v.optionValues[name]).filter((v): v is string => !!v)));
       return { name, values: isSizeOptionName(name) ? sortSizeValues(values) : values };
     })
-    .filter((option) => option.values.length > 0);
+    .filter((option) => option.values.length > 0)
+    .sort((a, b) => Number(isSizeOptionName(b.name)) - Number(isSizeOptionName(a.name)));
 
   return {
     id: row.id,
@@ -74,6 +80,7 @@ function toProduct(row: ProductRow): Product | null {
     name: row.title,
     description: row.description,
     gender: row.gender as Product["gender"],
+    productType: row.product_type as Product["productType"],
     images: normalizeImages(row.images),
     options,
     variants,
@@ -112,7 +119,8 @@ function matchesCategory(product: EnrichedProduct, category: CategoryKey): boole
   if (category === "sale") return product.variants.some((v) => v.compareAtPriceCents != null);
   if (category === "new") return isRecent(product.createdAt);
   if (category === "kids") return product.gender === "kids";
-  if (category === "men" || category === "women") return product.gender === category || product.gender === "unisex";
+  if (category === "shop") return product.productType === "apparel";
+  if (category === "accessories") return product.productType === "accessories";
   return false;
 }
 
@@ -139,7 +147,7 @@ export async function getProductBySlug(slug: string): Promise<EnrichedProduct | 
 export async function getRelatedProducts(product: EnrichedProduct, count = 4): Promise<EnrichedProduct[]> {
   const rows = await getActiveProductRows();
   return enrichRows(rows)
-    .filter((p) => p.gender === product.gender && p.id !== product.id)
+    .filter((p) => p.productType === product.productType && p.id !== product.id)
     .slice(0, count);
 }
 
