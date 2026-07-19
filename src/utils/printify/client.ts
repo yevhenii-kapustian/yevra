@@ -77,6 +77,56 @@ export async function markPublishingSucceeded(
   }
 }
 
+export type PrintifyOrderLineItem = {
+  product_id: string;
+  variant_id: number;
+  quantity: number;
+};
+
+export type PrintifyAddressTo = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  country: string;
+  region?: string;
+  address1: string;
+  address2?: string;
+  city: string;
+  zip: string;
+};
+
+// Submits a real production order for existing catalog products (not a
+// custom-artwork upload). send_shipping_notification is deliberately false —
+// Printify's own shipping emails would go out under Printify's name, which
+// breaks the point of a white-labeled custom_integration storefront.
+export async function createOrder(
+  shopId: string,
+  token: string,
+  params: { externalId: string; lineItems: PrintifyOrderLineItem[]; addressTo: PrintifyAddressTo }
+): Promise<{ id: string }> {
+  const res = await fetch(`${PRINTIFY_API_BASE}/shops/${shopId}/orders.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      external_id: params.externalId,
+      line_items: params.lineItems,
+      address_to: params.addressTo,
+      send_shipping_notification: false,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Printify create order error ${res.status}: ${body}`);
+  }
+
+  return res.json();
+}
+
 export async function getShopProducts(shopId: string, token: string): Promise<PrintifyProduct[]> {
   const products: PrintifyProduct[] = [];
   let page = 1;
