@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/utils/stripe/client";
 import { createAdminClient } from "@/utils/supabase/admin-client";
+import { createOrder } from "@/utils/printify/client";
+import type { ShippingAddress } from "@/lib/checkout-types";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -34,7 +36,9 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", orderId)
         .eq("payment_status", "unpaid")
-        .select("user_id, order_items(variant_id)")
+        .select(
+          "user_id, order_number, email, shipping_address, order_items(variant_id, printify_variant_id, quantity, product_id, products(printify_product_id))"
+        )
         .maybeSingle();
 
       // Server-side half of "purchased items leave the cart" — this covers
@@ -46,6 +50,44 @@ export async function POST(request: NextRequest) {
         const variantIds = paidOrder.order_items.map((i) => i.variant_id).filter((v): v is string => v !== null);
         if (variantIds.length > 0) {
           await admin.from("cart_items").delete().eq("user_id", paidOrder.user_id).in("variant_id", variantIds);
+        }
+      }
+
+      // Push the order to Printify so production/shipping actually starts —
+      // failures here must never fail this response: the payment already
+      // succeeded, and retries wouldn't help anyway since the update above
+      // is now a no-op (payment_status is no longer "unpaid"). A failure
+      // just leaves printify_order_id null for manual follow-up.
+      if (paidOrder) {
+        try {
+          const address = paidOrder.shipping_address as unknown as ShippingAddress;
+          const result = await createOrder(process.env.PRINTIFY_SHOP_ID!, process.env.PRINTIFY_API_TOKEN!, {
+            externalId: paidOrder.order_number,
+            lineItems: paidOrder.order_items.map((item) => ({
+              product_id: item.products!.printify_product_id,
+              variant_id: item.printify_variant_id,
+              quantity: item.quantity,
+            })),
+            addressTo: {
+              first_name: address.firstName,
+              last_name: address.lastName,
+              email: paidOrder.email,
+              phone: address.phone,
+              country: address.country,
+              region: address.state,
+              address1: address.line1,
+              address2: address.line2 ?? undefined,
+              city: address.city,
+              zip: address.postalCode,
+            },
+          });
+
+          await admin
+            .from("orders")
+            .update({ printify_order_id: result.id, fulfillment_status: "fulfilling" })
+            .eq("id", orderId);
+        } catch (err) {
+          console.error(`[stripe webhook] failed to push order ${orderId} to Printify`, err);
         }
       }
     }
