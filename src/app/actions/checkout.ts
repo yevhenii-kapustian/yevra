@@ -7,27 +7,9 @@ import { getVariantsForCheckout } from "@/lib/products-data";
 import { FREE_SHIPPING_THRESHOLD_CENTS, STANDARD_SHIPPING_COST_CENTS, EXPRESS_SHIPPING_COST_CENTS } from "@/lib/products";
 import type { ShippingAddress } from "@/lib/checkout-types";
 import { getStripe } from "@/utils/stripe/client";
+import { cartSchema, checkoutSchema } from "@/lib/validation/checkout";
 
 export type CheckoutActionState = { error?: string } | undefined;
-
-type CartPayloadLine = { variantId: string; qty: number };
-
-function parseCart(raw: string): CartPayloadLine[] | null {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    const lines = parsed.map((l) => ({ variantId: String(l.variantId), qty: Number(l.qty) }));
-    if (lines.length === 0 || lines.some((l) => !l.variantId || !Number.isInteger(l.qty) || l.qty < 1)) return null;
-    return lines;
-  } catch {
-    return null;
-  }
-}
-
-function requiredField(formData: FormData, name: string): string | null {
-  const value = String(formData.get(name) ?? "").trim();
-  return value ? value : null;
-}
 
 // Server Action backing the checkout form. Never trusts client-submitted
 // prices/totals — re-derives everything from Supabase before creating the
@@ -37,35 +19,40 @@ export async function startCheckout(
   _prevState: CheckoutActionState,
   formData: FormData
 ): Promise<CheckoutActionState> {
-  const email = requiredField(formData, "email");
-  const firstName = requiredField(formData, "firstName");
-  const lastName = requiredField(formData, "lastName");
-  const line1 = requiredField(formData, "line1");
-  const city = requiredField(formData, "city");
-  const state = requiredField(formData, "state");
-  const postalCode = requiredField(formData, "postalCode");
-  const country = requiredField(formData, "country");
-  const phone = requiredField(formData, "phone");
-  const line2 = String(formData.get("line2") ?? "").trim() || null;
-  const deliveryMethod = formData.get("deliveryMethod") === "express" ? "express" : "standard";
-
-  if (!email || !firstName || !lastName || !phone || !line1 || !city || !state || !postalCode || !country) {
-    return { error: "Please fill in all required fields." };
+  const fields = checkoutSchema.safeParse({
+    email: formData.get("email"),
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    phone: formData.get("phone"),
+    line1: formData.get("line1"),
+    line2: formData.get("line2"),
+    city: formData.get("city"),
+    state: formData.get("state"),
+    postalCode: formData.get("postalCode"),
+    country: formData.get("country"),
+    deliveryMethod: formData.get("deliveryMethod") === "express" ? "express" : "standard",
+  });
+  if (!fields.success) {
+    return { error: fields.error.issues[0].message };
   }
 
-  const cart = parseCart(String(formData.get("cart") ?? ""));
-  if (!cart) {
+  let cartLines: { variantId: string; qty: number }[];
+  try {
+    cartLines = cartSchema.parse(JSON.parse(String(formData.get("cart") ?? "")));
+  } catch {
     return { error: "Your cart is empty." };
   }
 
+  const { email, firstName, lastName, phone, line1, line2, city, state, postalCode, country, deliveryMethod } =
+    fields.data;
   const shippingAddress: ShippingAddress = { firstName, lastName, phone, line1, line2, city, state, postalCode, country };
 
-  const variantMap = await getVariantsForCheckout(cart.map((l) => l.variantId));
-  if (cart.some((l) => !variantMap.has(l.variantId))) {
+  const variantMap = await getVariantsForCheckout(cartLines.map((l) => l.variantId));
+  if (cartLines.some((l) => !variantMap.has(l.variantId))) {
     return { error: "One or more items in your cart are no longer available. Please review your cart." };
   }
 
-  const subtotalCents = cart.reduce((sum, line) => sum + variantMap.get(line.variantId)!.priceCents * line.qty, 0);
+  const subtotalCents = cartLines.reduce((sum, line) => sum + variantMap.get(line.variantId)!.priceCents * line.qty, 0);
   const shippingCents =
     deliveryMethod === "express"
       ? EXPRESS_SHIPPING_COST_CENTS
@@ -105,7 +92,7 @@ export async function startCheckout(
     orderId = order.id;
 
     const { error: itemsError } = await admin.from("order_items").insert(
-      cart.map((line) => {
+      cartLines.map((line) => {
         const variant = variantMap.get(line.variantId)!;
         return {
           order_id: order.id,
@@ -135,7 +122,7 @@ export async function startCheckout(
       mode: "payment",
       customer_email: email,
       line_items: [
-        ...cart.map((line) => {
+        ...cartLines.map((line) => {
           const variant = variantMap.get(line.variantId)!;
           return {
             price_data: {

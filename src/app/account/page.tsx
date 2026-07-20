@@ -16,16 +16,20 @@ export default async function AccountPage() {
 
   if (!user) redirect("/login");
 
+  const isAdmin = user.email === process.env.ADMIN_EMAIL;
+
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
   // RLS ("Users can view own orders") already scopes this to the current
   // user — no explicit .eq('user_id', ...) filter needed. payment_status
   // filter excludes abandoned/unpaid checkouts (order rows exist before
   // payment completes — see src/app/actions/checkout.ts) so the customer
-  // never sees a "zombie" order they never actually paid for.
+  // never sees a "zombie" order they never actually paid for. Uses neq
+  // rather than eq("payment_status", "paid") so a since-refunded order
+  // (still a real completed purchase) doesn't vanish from their history.
   const { data: orders } = await supabase
     .from("orders")
     .select("order_number, total_cents, fulfillment_status, created_at")
-    .eq("payment_status", "paid")
+    .neq("payment_status", "unpaid")
     .order("created_at", { ascending: false });
 
   return (
@@ -37,11 +41,18 @@ export default async function AccountPage() {
           </h1>
           <p className="text-[13px] text-muted">{user.email}</p>
         </div>
-        <form action={signOut}>
-          <button type="submit" className="text-[13px] font-semibold text-accent hover:underline">
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          {isAdmin && (
+            <Link href="/admin" className="text-[13px] font-semibold text-muted hover:text-ink">
+              Admin
+            </Link>
+          )}
+          <form action={signOut}>
+            <button type="submit" className="text-[13px] font-semibold text-accent hover:underline">
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       <h2 className="text-base font-extrabold mb-4">Order history</h2>

@@ -389,6 +389,78 @@ export type Database = {
         }
         Relationships: []
       }
+      return_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          description: string
+          external_reorder_ref: string | null
+          id: string
+          order_id: string
+          order_item_id: string
+          photo_url: string | null
+          printify_reprint_order_id: string | null
+          reason: string
+          resolution_type: string | null
+          resolved_at: string | null
+          status: string
+          stripe_refund_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          description: string
+          external_reorder_ref?: string | null
+          id?: string
+          order_id: string
+          order_item_id: string
+          photo_url?: string | null
+          printify_reprint_order_id?: string | null
+          reason: string
+          resolution_type?: string | null
+          resolved_at?: string | null
+          status?: string
+          stripe_refund_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          description?: string
+          external_reorder_ref?: string | null
+          id?: string
+          order_id?: string
+          order_item_id?: string
+          photo_url?: string | null
+          printify_reprint_order_id?: string | null
+          reason?: string
+          resolution_type?: string | null
+          resolved_at?: string | null
+          status?: string
+          stripe_refund_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_requests_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: true
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

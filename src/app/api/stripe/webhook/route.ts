@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/utils/stripe/client";
 import { createAdminClient } from "@/utils/supabase/admin-client";
-import { createOrder } from "@/utils/printify/client";
+import { createOrder, toPrintifyAddress } from "@/utils/printify/client";
 import type { ShippingAddress } from "@/lib/checkout-types";
 
 export async function POST(request: NextRequest) {
@@ -68,18 +68,7 @@ export async function POST(request: NextRequest) {
               variant_id: item.printify_variant_id,
               quantity: item.quantity,
             })),
-            addressTo: {
-              first_name: address.firstName,
-              last_name: address.lastName,
-              email: paidOrder.email,
-              phone: address.phone,
-              country: address.country,
-              region: address.state,
-              address1: address.line1,
-              address2: address.line2 ?? undefined,
-              city: address.city,
-              zip: address.postalCode,
-            },
+            addressTo: toPrintifyAddress(address, paidOrder.email),
           });
 
           await admin

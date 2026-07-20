@@ -4,15 +4,25 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server-client";
 import { createAdminClient } from "@/utils/supabase/admin-client";
 import type { ShippingAddress } from "@/lib/checkout-types";
+import {
+  createAccountFromOrderSchema,
+  loginSchema,
+  requestPasswordResetSchema,
+  signupSchema,
+  updatePasswordSchema,
+} from "@/lib/validation/auth";
 
 export type AuthActionState = { error?: string; success?: boolean } | undefined;
 
 export async function login(_prevState: AuthActionState, formData: FormData): Promise<AuthActionState> {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
+  const parsed = loginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: error.message };
 
   redirect("/account");
@@ -22,18 +32,21 @@ export async function login(_prevState: AuthActionState, formData: FormData): Pr
 // redirect into yet — the signup page swaps to a "check your email" message
 // on { success: true } instead of navigating anywhere.
 export async function signup(_prevState: AuthActionState, formData: FormData): Promise<AuthActionState> {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("fullName") ?? "");
+  const parsed = signupSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+    fullName: formData.get("fullName"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
-    email,
-    password,
+    email: parsed.data.email,
+    password: parsed.data.password,
     // Key must be exactly "full_name" — the handle_new_user() trigger on
     // auth.users reads raw_user_meta_data->>'full_name' to populate
     // profiles.full_name. A different key silently leaves it null.
-    options: { data: { full_name: fullName } },
+    options: { data: { full_name: parsed.data.fullName } },
   });
   if (error) return { error: error.message };
 
@@ -50,10 +63,11 @@ export async function requestPasswordReset(
   _prevState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  const email = String(formData.get("email") ?? "");
+  const parsed = requestPasswordResetSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email);
   if (error) return { error: error.message };
 
   return { success: true };
@@ -62,10 +76,11 @@ export async function requestPasswordReset(
 // Only reachable with a valid recovery session, established by
 // /auth/confirm after the user clicks the reset-password email link.
 export async function updatePassword(_prevState: AuthActionState, formData: FormData): Promise<AuthActionState> {
-  const password = String(formData.get("password") ?? "");
+  const parsed = updatePasswordSchema.safeParse({ password: formData.get("password") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password });
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { error: error.message };
 
   redirect("/account");
@@ -83,12 +98,12 @@ export async function createAccountFromOrder(
   _prevState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  const orderId = String(formData.get("orderId") ?? "");
-  const password = String(formData.get("password") ?? "");
-
-  if (!orderId || password.length < 6) {
-    return { error: "Please enter a password with at least 6 characters." };
-  }
+  const parsed = createAccountFromOrderSchema.safeParse({
+    orderId: formData.get("orderId"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { orderId, password } = parsed.data;
 
   const admin = createAdminClient();
   const { data: order } = await admin
