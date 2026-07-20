@@ -16,7 +16,7 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: "Yevra",
-  description: "Considered clothing for everyday life.",
+  description: "Wearable reminders for the person you're becoming.",
 };
 
 export default async function RootLayout({

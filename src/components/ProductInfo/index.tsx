@@ -18,10 +18,14 @@ type ProductInfoProps = {
 // itself only covers a reprint/refund for damaged items or print errors
 // within 30 days — never "wrong size" or "changed my mind". Promising more
 // than that here means Yevra eats the cost, not Printify. See
-// https://help.printify.com/hc/en-us/articles/4483630299025 and
-// https://help.printify.com/hc/en-us/articles/4483629751825 (2–7 business
-// day production time before an order even ships).
-const DELIVERY_RETURNS_CONTENT = `Free standard delivery on orders over ${formatCents(FREE_SHIPPING_THRESHOLD_CENTS)}. Each piece is made to order — most ship within 2–7 business days. Free reprint or refund for damaged items or print errors within 30 days of delivery. Sizing and change-of-mind returns aren't available since every piece is made specifically for you.`;
+// https://help.printify.com/hc/en-us/articles/4483630299025.
+//
+// The "10 business days" production estimate is pulled from Printify's
+// catalog shipping API (GET /v1/catalog/blueprints/{id}/print_providers/{id}/shipping.json)
+// for the actual blueprint/print-provider pairs this store's products use —
+// every one of them currently reports a 10-day handling_time, not the
+// shorter "2–7 business days" some Printify help articles quote generically.
+const DELIVERY_RETURNS_CONTENT = `Free standard delivery on orders over ${formatCents(FREE_SHIPPING_THRESHOLD_CENTS)}. Each piece is made to order — production takes up to 10 business days before your order ships. Free reprint or refund for damaged items or print errors within 30 days of delivery. Sizing and change-of-mind returns aren't available since every piece is made specifically for you.`;
 const FALLBACK_DESCRIPTION =
   "A wardrobe staple crafted from premium materials, designed for everyday comfort and a considered fit. Made to last, season after season.";
 

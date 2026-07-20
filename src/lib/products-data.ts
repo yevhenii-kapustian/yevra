@@ -138,6 +138,27 @@ export async function getProductsByCategory(category: CategoryKey): Promise<Enri
   return enrichRows(rows).filter((p) => matchesCategory(p, category));
 }
 
+export type SearchResult = {
+  slug: string;
+  name: string;
+  image: string | null;
+  priceLabel: string;
+};
+
+// Plain substring match on title — proportionate for a catalog this size;
+// no need for a search index/full-text setup. An empty query browses the
+// full active catalog instead of returning nothing, so opening search with
+// nothing typed yet isn't just a blank panel.
+export async function searchProducts(query: string, limit = 12): Promise<SearchResult[]> {
+  const trimmed = query.trim().toLowerCase();
+
+  const rows = await getActiveProductRows();
+  return enrichRows(rows)
+    .filter((p) => !trimmed || p.name.toLowerCase().includes(trimmed))
+    .slice(0, limit)
+    .map((p) => ({ slug: p.slug, name: p.name, image: p.primaryImage, priceLabel: p.priceLabel }));
+}
+
 export async function getProductBySlug(slug: string): Promise<EnrichedProduct | null> {
   const row = await getProductRowBySlug(slug);
   if (!row) return null;

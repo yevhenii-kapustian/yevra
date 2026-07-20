@@ -1,3 +1,5 @@
+import type { ShippingAddress } from "@/lib/checkout-types";
+
 const PRINTIFY_API_BASE = "https://api.printify.com/v1";
 
 export type PrintifyOptionValue = {
@@ -95,6 +97,23 @@ export type PrintifyAddressTo = {
   city: string;
   zip: string;
 };
+
+// Shared by the Stripe webhook's initial order push and the returns flow's
+// reprint action — both need the same ShippingAddress -> Printify shape.
+export function toPrintifyAddress(address: ShippingAddress, email: string): PrintifyAddressTo {
+  return {
+    first_name: address.firstName,
+    last_name: address.lastName,
+    email,
+    phone: address.phone,
+    country: address.country,
+    region: address.state,
+    address1: address.line1,
+    address2: address.line2 ?? undefined,
+    city: address.city,
+    zip: address.postalCode,
+  };
+}
 
 // Submits a real production order for existing catalog products (not a
 // custom-artwork upload). send_shipping_notification is deliberately false —
