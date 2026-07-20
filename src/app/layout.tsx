@@ -4,6 +4,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Toast from "@/components/Toast";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { createClient } from "@/utils/supabase/server-client";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -14,23 +16,30 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: "Yevra",
-  description: "Considered clothing for everyday life.",
+  description: "Wearable reminders for the person you're becoming.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en" className={`${manrope.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
-        <CartProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <Toast />
-        </CartProvider>
+        <AuthProvider initialUser={user}>
+          <CartProvider>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <Toast />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -3,6 +3,8 @@ import CategoryGrid from "@/components/CategoryGrid";
 import TrendingProducts from "@/components/TrendingProducts";
 import SaleBanner from "@/components/SaleBanner";
 
+export const dynamic = "force-dynamic";
+
 export default function Home() {
   return (
     <div>

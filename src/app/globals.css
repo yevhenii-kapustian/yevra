@@ -2,7 +2,7 @@
 
 :root {
   --ink: oklch(22% 0.015 50);
-  --paper: oklch(98% 0.006 75);
+  --paper: oklch(100% 0 0);
   --accent: oklch(64% 0.19 45);
   --line: oklch(90% 0.008 60);
   --muted: oklch(50% 0.02 50);
@@ -43,5 +43,14 @@ body {
   to {
     opacity: 1;
     transform: translate(-50%, 0);
+  }
+}
+
+@keyframes heroProgress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
   }
 }

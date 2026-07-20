@@ -1,28 +1,46 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "@/context/CartContext";
-import type { EnrichedProduct } from "@/lib/products";
+import { FALLBACK_IMAGE_BG, type EnrichedProduct } from "@/lib/products";
 
 type ProductCardProps = {
   product: EnrichedProduct;
   showDiscountBadge?: boolean;
   showQuickAdd?: boolean;
+  // Defaults to a square crop (catalog/related grids, where every card is
+  // the same size). Trending Now instead sizes cards by an explicit grid
+  // row height, so it passes "flex-1" to fill whatever's left after the
+  // title/price text below it.
+  imageClassName?: string;
 };
 
-export default function ProductCard({ product, showDiscountBadge = true, showQuickAdd = false }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  showDiscountBadge = true,
+  showQuickAdd = false,
+  imageClassName = "aspect-square",
+}: ProductCardProps) {
   const { quickAdd } = useCart();
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <Link
-        href={`/product/${product.id}`}
-        className="group block relative aspect-3/4 rounded-[3px] overflow-hidden mb-2.5"
-        style={{ background: product.stripeBg }}
+        href={`/product/${product.slug}`}
+        className={`group block relative ${imageClassName} rounded-[3px] overflow-hidden mb-2.5`}
+        style={{ background: FALLBACK_IMAGE_BG }}
       >
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-mono text-[10px] tracking-wide text-black/50 opacity-50">PRODUCT PHOTO</span>
-        </div>
+        {product.primaryImage && (
+          <Image
+            src={product.primaryImage}
+            alt={product.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 50vw, 25vw"
+            quality={95}
+          />
+        )}
         {showDiscountBadge && product.hasDiscount && (
           <div className="absolute top-2.5 left-2.5 bg-accent text-white text-[11px] font-bold px-1.5 py-0.5 rounded-sm">
             -{product.discountPct}%
@@ -41,8 +59,7 @@ export default function ProductCard({ product, showDiscountBadge = true, showQui
           </button>
         )}
       </Link>
-      <div className="text-[11px] font-bold tracking-wide text-muted uppercase">{product.brand}</div>
-      <Link href={`/product/${product.id}`} className="block text-[13.5px] font-semibold my-0.5 mb-1 leading-snug">
+      <Link href={`/product/${product.slug}`} className="block text-[13.5px] font-semibold my-0.5 mb-1 leading-snug">
         {product.name}
       </Link>
       <div className="flex gap-2 items-baseline">

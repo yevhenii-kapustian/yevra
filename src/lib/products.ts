@@ -1,156 +1,149 @@
-export type ColorOption = { name: string; hex: string };
+// Client-safe: types + pure helpers only. No Supabase/next-headers imports —
+// this file is imported directly by client components (cart, product card,
+// etc.), so anything server-only belongs in products-data.ts instead.
 
-export type Gender = "men" | "women" | "kids";
+export type ProductOption = { name: string; values: string[] };
 
-export type CategoryKey = Gender | "sale" | "new";
-
-export type RawProduct = {
+export type ProductVariant = {
   id: string;
-  name: string;
-  brand: string;
-  gender: Gender;
-  price: number;
-  oldPrice?: number;
-  isNew?: boolean;
-  colors: ColorOption[];
-  sizes: string[];
+  optionValues: Record<string, string>;
+  variantLabel: string;
+  priceCents: number;
+  compareAtPriceCents: number | null;
+  imageUrl: string | null;
 };
 
-export type EnrichedProduct = RawProduct & {
+export type Gender = "men" | "women" | "kids" | "unisex";
+export type ProductType = "apparel" | "accessories";
+
+export type Product = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  gender: Gender;
+  productType: ProductType;
+  images: { src: string; isDefault: boolean }[];
+  options: ProductOption[];
+  variants: ProductVariant[]; // pre-filtered to enabled + available — never empty
+  createdAt: string;
+};
+
+export type EnrichedProduct = Product & {
+  priceLabel: string;
+  minPriceCents: number;
   hasDiscount: boolean;
   discountPct: number;
-  priceLabel: string;
   oldPriceLabel: string;
-  stripeBg: string;
+  primaryImage: string | null;
 };
 
+// "shop"/"accessories" drive the nav (see src/components/Header) — "kids"
+// and "sale" stay valid, reachable categories (SaleBanner links to
+// /catalog/sale and self-hides until real discounted items exist) without
+// being advertised in the nav bar until there's real inventory behind them.
+export type CategoryKey = "shop" | "accessories" | "kids" | "sale" | "new";
 export type SortKey = "popular" | "price-asc" | "price-desc" | "newest";
 
-const BRANDS = [
-  "NORDCLIFF",
-  "HAVEN & CO",
-  "REDWOOD SUPPLY",
-  "STONE HARBOR",
-  "WOLF & PINE",
-  "URBAN FIELD",
-  "ALTITUDE",
-  "GREY ANCHOR",
-];
-
-const COLOR_POOL: ColorOption[] = [
-  { name: "Black", hex: "#2b2b2b" },
-  { name: "Stone", hex: "#cfc6b8" },
-  { name: "Olive", hex: "#6b7052" },
-  { name: "Navy", hex: "#33445c" },
-  { name: "Rust", hex: "#b5613f" },
-  { name: "White", hex: "#f2efe9" },
-  { name: "Charcoal", hex: "#4a4a4a" },
-  { name: "Camel", hex: "#b08d57" },
-];
-
-const LETTER_SIZES = ["S", "M", "L", "XL", "XXL"];
-const WAIST_SIZES = ["28", "30", "32", "34", "36"];
-
-function isWaistItem(name: string) {
-  return /jean|trouser|pant|jogger|short/i.test(name);
-}
-
-type RawProductSeed = Omit<RawProduct, "colors" | "sizes">;
-
-const RAW_PRODUCT_SEEDS: RawProductSeed[] = [
-  { id: "p1", name: "Essential Crewneck Tee", brand: BRANDS[1], gender: "men", price: 32, oldPrice: 40, isNew: true },
-  { id: "p2", name: "Oxford Button-Down Shirt", brand: BRANDS[0], gender: "men", price: 58, isNew: true },
-  { id: "p3", name: "Slim Straight Jeans", brand: BRANDS[2], gender: "men", price: 74, oldPrice: 95 },
-  { id: "p4", name: "Waxed Field Jacket", brand: BRANDS[3], gender: "men", price: 148 },
-  { id: "p5", name: "Merino Crewneck Sweater", brand: BRANDS[4], gender: "men", price: 89, isNew: true },
-  { id: "p6", name: "Cargo Utility Shorts", brand: BRANDS[5], gender: "men", price: 46 },
-  { id: "p7", name: "Linen Short-Sleeve Shirt", brand: BRANDS[1], gender: "men", price: 54 },
-  { id: "p8", name: "Quilted Bomber Jacket", brand: BRANDS[6], gender: "men", price: 132, oldPrice: 165 },
-  { id: "p9", name: "Relaxed Fit Chino Pants", brand: BRANDS[0], gender: "men", price: 68 },
-  { id: "p10", name: "Ribbed Knit Polo", brand: BRANDS[7], gender: "men", price: 44, isNew: true },
-  { id: "p11", name: "Tailored Wide-Leg Trousers", brand: BRANDS[1], gender: "women", price: 72 },
-  { id: "p12", name: "Cropped Denim Jacket", brand: BRANDS[2], gender: "women", price: 86, oldPrice: 110 },
-  { id: "p13", name: "Silk-Blend Wrap Blouse", brand: BRANDS[0], gender: "women", price: 64 },
-  { id: "p14", name: "Ribbed Knit Midi Dress", brand: BRANDS[7], gender: "women", price: 58 },
-  { id: "p15", name: "Graphic Print Tee", brand: BRANDS[5], gender: "kids", price: 22 },
-  { id: "p16", name: "Fleece Zip Hoodie", brand: BRANDS[4], gender: "kids", price: 38, oldPrice: 48 },
-];
-
-export const RAW_PRODUCTS: RawProduct[] = RAW_PRODUCT_SEEDS.map((p, i) => ({
-  ...p,
-  colors: [COLOR_POOL[i % COLOR_POOL.length], COLOR_POOL[(i + 3) % COLOR_POOL.length], COLOR_POOL[(i + 5) % COLOR_POOL.length]],
-  sizes: isWaistItem(p.name) ? WAIST_SIZES : LETTER_SIZES,
-}));
-
-export const GENDER_LABELS: Record<CategoryKey, string> = {
-  men: "Men",
-  women: "Women",
+export const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  shop: "Shop",
+  accessories: "Accessories",
   kids: "Kids",
   sale: "Sale",
   new: "New Arrivals",
 };
 
-export function stripeBgFor(hex: string) {
-  return `repeating-linear-gradient(135deg, color-mix(in srgb, ${hex} 22%, white) 0 16px, color-mix(in srgb, ${hex} 11%, white) 16px 32px)`;
+const LETTER_SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "2XL", "XXXL", "3XL", "4XL", "5XL", "6XL"];
+
+// Printify returns variants (and therefore size values) in whatever order
+// they happen to sync in, not S->XL order. Known letter sizes sort by the
+// canonical list above; numeric sizes (waist measurements, etc.) sort
+// numerically; anything unrecognized falls back to alphabetical.
+export function sortSizeValues(values: string[]): string[] {
+  return values.slice().sort((a, b) => {
+    const ai = LETTER_SIZE_ORDER.indexOf(a.toUpperCase());
+    const bi = LETTER_SIZE_ORDER.indexOf(b.toUpperCase());
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+
+    const an = Number(a);
+    const bn = Number(b);
+    if (!Number.isNaN(an) && !Number.isNaN(bn)) return an - bn;
+
+    return a.localeCompare(b);
+  });
 }
 
-export function enrichProduct(p: RawProduct): EnrichedProduct {
-  const hasDiscount = !!p.oldPrice;
-  const discountPct = hasDiscount ? Math.round((1 - p.price / p.oldPrice!) * 100) : 0;
-  return {
-    ...p,
-    hasDiscount,
-    discountPct,
-    priceLabel: "$" + p.price,
-    oldPriceLabel: hasDiscount ? "$" + p.oldPrice : "",
-    stripeBg: stripeBgFor(p.colors[0].hex),
-  };
+// Printify names the "size" option differently per blueprint — plain
+// "Size"/"Sizes" for apparel and most accessories, but "Bag Size", "Hat
+// sizes", etc. for others. Match by substring instead of an exact list so
+// none of these fall through. "Phone Models" (the phone case's device
+// picker) correctly does NOT match — it's not a size in any customer-facing
+// sense, just happens to share Printify's internal "size" option type.
+export function isSizeOptionName(name: string): boolean {
+  return /size/i.test(name);
 }
 
-export function getProductById(id: string): RawProduct | undefined {
-  return RAW_PRODUCTS.find((p) => p.id === id);
-}
-
-export function getFeaturedProducts(count = 4): EnrichedProduct[] {
-  return RAW_PRODUCTS.slice(0, count).map(enrichProduct);
-}
-
-function matchesCategory(p: RawProduct, category: CategoryKey) {
-  if (category === "sale") return !!p.oldPrice;
-  if (category === "new") return !!p.isNew;
-  return p.gender === category;
-}
-
-export function getCategoryFacets(category: CategoryKey) {
-  const inCategory = RAW_PRODUCTS.filter((p) => matchesCategory(p, category));
-  return {
-    brands: Array.from(new Set(inCategory.map((p) => p.brand))),
-    sizes: Array.from(new Set(inCategory.flatMap((p) => p.sizes))),
-  };
-}
-
-export function getProductsByCategory(
-  category: CategoryKey,
-  opts: { brands?: string[]; sizes?: string[]; sort?: SortKey } = {}
-): EnrichedProduct[] {
-  const { brands = [], sizes = [], sort = "popular" } = opts;
-  let filtered = RAW_PRODUCTS.filter((p) => matchesCategory(p, category));
-  if (brands.length) filtered = filtered.filter((p) => brands.includes(p.brand));
-  if (sizes.length) filtered = filtered.filter((p) => p.sizes.some((sz) => sizes.includes(sz)));
-
-  if (sort === "price-asc") filtered = filtered.slice().sort((a, b) => a.price - b.price);
-  else if (sort === "price-desc") filtered = filtered.slice().sort((a, b) => b.price - a.price);
-  else if (sort === "newest") filtered = filtered.slice().sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-
-  return filtered.map(enrichProduct);
-}
-
-export function getRelatedProducts(product: RawProduct, count = 4): EnrichedProduct[] {
-  return RAW_PRODUCTS.filter((p) => p.gender === product.gender && p.id !== product.id)
-    .slice(0, count)
-    .map(enrichProduct);
-}
+// Used whenever a product has zero images — deliberately neutral (no color
+// hex exists in the real data, unlike the old static mock).
+export const FALLBACK_IMAGE_BG =
+  "repeating-linear-gradient(135deg, oklch(95% 0.005 60) 0 16px, oklch(91% 0.005 60) 16px 32px)";
 
 export function isValidCategory(value: string): value is CategoryKey {
-  return value in GENDER_LABELS;
+  return value in CATEGORY_LABELS;
+}
+
+export function breadcrumbCategoryFor(productType: ProductType): CategoryKey {
+  return productType === "accessories" ? "accessories" : "shop";
+}
+
+export function formatCents(cents: number): string {
+  return "$" + (cents / 100).toFixed(2).replace(/\.00$/, "");
+}
+
+// Single source of truth for shipping pricing — CartContext, CheckoutView,
+// CheckoutForm, and the PDP's "Delivery & Returns" copy all derive from
+// these instead of restating the numbers independently (they used to drift:
+// the delivery picker said "Free"/"$12" as static strings that had no actual
+// connection to what CartContext charged).
+export const FREE_SHIPPING_THRESHOLD_CENTS = 7500;
+export const STANDARD_SHIPPING_COST_CENTS = 800;
+export const EXPRESS_SHIPPING_COST_CENTS = 1200;
+
+// Pure, sync — operates on an already-fetched array so CatalogView can
+// filter/sort without another round trip to Supabase.
+export function getCategoryFacets(products: EnrichedProduct[]) {
+  const sizes = new Set<string>();
+  for (const product of products) {
+    for (const variant of product.variants) {
+      for (const [name, value] of Object.entries(variant.optionValues)) {
+        if (isSizeOptionName(name) && value) sizes.add(value);
+      }
+    }
+  }
+  return { sizes: sortSizeValues(Array.from(sizes)) };
+}
+
+export function filterAndSortProducts(
+  products: EnrichedProduct[],
+  opts: { sizes?: string[]; sort?: SortKey } = {}
+): EnrichedProduct[] {
+  const { sizes = [], sort = "popular" } = opts;
+
+  let filtered = products;
+  if (sizes.length) {
+    filtered = filtered.filter((p) =>
+      p.variants.some((v) =>
+        Object.entries(v.optionValues).some(([name, value]) => isSizeOptionName(name) && sizes.includes(value))
+      )
+    );
+  }
+
+  if (sort === "price-asc") filtered = filtered.slice().sort((a, b) => a.minPriceCents - b.minPriceCents);
+  else if (sort === "price-desc") filtered = filtered.slice().sort((a, b) => b.minPriceCents - a.minPriceCents);
+  else if (sort === "newest")
+    filtered = filtered.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return filtered;
 }

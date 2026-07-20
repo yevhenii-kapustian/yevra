@@ -1,45 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import CheckoutForm from "@/components/CheckoutForm";
 import CheckoutSummary from "@/components/CheckoutSummary";
-import OrderConfirmation from "@/components/OrderConfirmation";
 import { useCart } from "@/context/CartContext";
+import { EXPRESS_SHIPPING_COST_CENTS } from "@/lib/products";
+import { startCheckout } from "@/app/actions/checkout";
 
 type DeliveryMethod = "standard" | "express";
-type PaymentMethod = "card" | "cod";
 
 export default function CheckoutView() {
-  const { shipping, clearCart } = useCart();
+  const { cartLines, shippingCents, isHydrated } = useCart();
+  const router = useRouter();
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("standard");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [orderNumber, setOrderNumber] = useState("");
+  const [state, formAction, pending] = useActionState(startCheckout, undefined);
 
-  const shippingCost = deliveryMethod === "express" ? 12 : shipping;
+  // cartLines starts empty on every mount until the async hydrate effect in
+  // CartContext resolves — gate on isHydrated so a real, still-loading cart
+  // doesn't get bounced back to /cart before it's had a chance to load.
+  useEffect(() => {
+    if (isHydrated && cartLines.length === 0) router.replace("/cart");
+  }, [isHydrated, cartLines.length, router]);
 
-  const placeOrder = () => {
-    setOrderNumber(String(Math.floor(10000 + Math.random() * 90000)));
-    setOrderPlaced(true);
-    clearCart();
-  };
+  if (!isHydrated || cartLines.length === 0) return null;
 
-  if (orderPlaced) {
-    return <OrderConfirmation orderNumber={orderNumber} />;
-  }
+  const shippingCostCents = deliveryMethod === "express" ? EXPRESS_SHIPPING_COST_CENTS : shippingCents;
+  const cartPayload = JSON.stringify(cartLines.map((l) => ({ variantId: l.variantId, qty: l.qty })));
 
   return (
     <div>
       <h1 className="text-[28px] font-extrabold mb-6">Checkout</h1>
-      <div className="flex gap-10 flex-wrap items-start">
+      <form action={formAction} className="flex gap-10 flex-wrap items-start">
+        <input type="hidden" name="cart" value={cartPayload} />
+        <input type="hidden" name="deliveryMethod" value={deliveryMethod} />
         <CheckoutForm
           deliveryMethod={deliveryMethod}
           onSelectDelivery={setDeliveryMethod}
-          paymentMethod={paymentMethod}
-          onSelectPayment={setPaymentMethod}
+          standardShippingCents={shippingCents}
+          expressShippingCents={EXPRESS_SHIPPING_COST_CENTS}
         />
-        <CheckoutSummary shippingCost={shippingCost} onPlaceOrder={placeOrder} />
-      </div>
+        <CheckoutSummary shippingCostCents={shippingCostCents} pending={pending} error={state?.error} />
+      </form>
     </div>
   );
 }
